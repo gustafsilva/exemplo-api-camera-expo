@@ -6,15 +6,14 @@ import {
   Text,
 } from 'react-native';
 import {
-  Permissions,
   Camera,
-  FileSystem,
 } from 'expo';
 
 import HeaderCameraScreen from './HeaderCameraScreen';
 import FooterCameraScreen from './FooterCameraScreen';
-
-const DIRECTORY_PHOTOS_NAME = `${FileSystem.documentDirectory}photos`;
+import { takePhoto } from '../../api/camera';
+import { makeDirectoryPhotos } from '../../api/files';
+import { getPermissionCamera } from '../../api/authMobile';
 
 class CameraScreen extends PureComponent {
   state = {
@@ -24,30 +23,15 @@ class CameraScreen extends PureComponent {
   };
 
   async componentWillMount() {
-    const { status } = await Permissions.askAsync(Permissions.CAMERA);
+    const status = await getPermissionCamera();
     this.setState({ permissionGranted: status === 'granted' });
   }
 
-  componentDidMount = () => (
-    FileSystem.makeDirectoryAsync(DIRECTORY_PHOTOS_NAME).catch(error => error)
-  );
+  componentDidMount = () => makeDirectoryPhotos();
 
   toggleType = () => this.setState(state => ({ type: state.type === 'back' ? 'front' : 'back' }));
 
   toggleFlashMode = () => this.setState(state => ({ flashMode: state.flashMode === 'off' ? 'on' : 'off' }));
-
-  takePhoto = () => {
-    if (this.camera) {
-      this.camera.takePictureAsync({ onPictureSaved: this.savePhoto });
-    }
-  }
-
-  savePhoto = async (photo) => {
-    await FileSystem.moveAsync({
-      from: photo.uri,
-      to: `${FileSystem.documentDirectory}${DIRECTORY_PHOTOS_NAME}/${Date.now()}.jpg`,
-    });
-  }
 
   render() {
     const {
@@ -73,7 +57,7 @@ class CameraScreen extends PureComponent {
         <FooterCameraScreen
           flashMode={flashMode}
           toggleFlashMode={this.toggleFlashMode}
-          takePhoto={this.takePhoto}
+          takePhoto={() => takePhoto(this.camera)}
           toggleType={this.toggleType}
         />
       </View>
